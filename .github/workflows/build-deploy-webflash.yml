@@ -55,7 +55,7 @@ jobs:
       - name: Build CYD
         run: platformio run -e cyd
       - name: Upload artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: CYD Firmware
           path: .pio/build/cyd/firmware.bin
@@ -76,7 +76,7 @@ jobs:
       - name: Build CYD2USB
         run: platformio run -e cyd2usb
       - name: Upload artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: CYD Firmware
           path: .pio/build/cyd2usb/firmware.bin
@@ -97,7 +97,7 @@ jobs:
       - name: Build Matrix
         run: platformio run -e trinity
       - name: Upload artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: CYD Firmware
           path: .pio/build/trinity/firmware.bin
