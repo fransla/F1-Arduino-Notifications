@@ -78,7 +78,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: CYD Firmware
+          name: CYD2USB Firmware
           path: .pio/build/cyd2usb/firmware.bin
           if-no-files-found: error
       - name: Copy compiled binaries for webflash
@@ -99,7 +99,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: CYD Firmware
+          name: Matrix Firmware
           path: .pio/build/trinity/firmware.bin
           if-no-files-found: error
       - name: Copy compiled binaries for webflash
