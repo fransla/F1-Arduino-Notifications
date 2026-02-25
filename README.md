@@ -71,7 +71,7 @@ To get notified about the races, you will need some things on Telegram.
 
 ### Step 2 - Flash the Project
 
-This project can be flashed directly from your browser [here](https://witnessmenow.github.io/F1-Arduino-Notifications/) (Chrome & Edge only)
+This project can be flashed directly from your browser [here](https://fransla.github.io/F1-Arduino-Notifications/) (Chrome & Edge only)
 
 - For the "Cheap Yellow Display" (CYD):
   - If your CYD has one USB port, Click the "CYD" button
