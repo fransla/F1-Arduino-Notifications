@@ -5,8 +5,10 @@
 #define CURRENT_RACE_FILE_NAME "/current_races.json"
 
 // path to the races schedule, needs to be updated each year
-#define RACE_JSON_URL "https://raw.githubusercontent.com/sportstimes/f1/main/_db/f1/2025.json"
-// Number of days before the race to display circuit image rather than sessions schedule
+#define RACE_JSON_URL                                                          \
+  "https://raw.githubusercontent.com/sportstimes/f1/main/_db/f1/2026.json"
+// Number of days before the race to display circuit image rather than sessions
+// schedule
 #define DaysBeforeRace 3
 
 time_t nextRaceStartUtc;
@@ -14,13 +16,9 @@ time_t nextRaceStartUtc;
 Timezone myTZ;
 F1Config rl_f1Config;
 
-void raceLogicSetup(F1Config f1Config)
-{
-  rl_f1Config = f1Config;
-}
+void raceLogicSetup(F1Config f1Config) { rl_f1Config = f1Config; }
 
-bool isSessionInFuture(const char *sessionStartTime)
-{
+bool isSessionInFuture(const char *sessionStartTime) {
   struct tm tm = {0};
   // Parse date from UTC and convert to an epoch
   strptime(sessionStartTime, "%Y-%m-%dT%H:%M:%S", &tm);
@@ -29,33 +27,30 @@ bool isSessionInFuture(const char *sessionStartTime)
   return UTC.now() < sessionEpoch;
 }
 
-bool isRaceWeek(const char *sessionStartTime)
-{
+bool isRaceWeek(const char *sessionStartTime) {
   struct tm tm = {0};
   // Parse date from UTC and convert to an epoch
   strptime(sessionStartTime, "%Y-%m-%dT%H:%M:%S", &tm);
 
-  time_t DaysBeforeRaceEpoch = mktime(&tm) - (DaysBeforeRace * SECS_PER_DAY); 
+  time_t DaysBeforeRaceEpoch = mktime(&tm) - (DaysBeforeRace * SECS_PER_DAY);
   return UTC.now() > DaysBeforeRaceEpoch;
 }
 
-String getConvertedTime(const char *sessionStartTime, const char *timeFormat = "")
-{
+String getConvertedTime(const char *sessionStartTime,
+                        const char *timeFormat = "") {
   struct tm tm = {0};
   // Parse date from UTC and convert to an epoch
   strptime(sessionStartTime, "%Y-%m-%dT%H:%M:%S", &tm);
   time_t sessionEpoch = mktime(&tm);
 
   String timeFormatStr = rl_f1Config.timeFormat;
-  if (timeFormat[0] != 0)
-  {
+  if (timeFormat[0] != 0) {
     timeFormatStr = String(timeFormat);
   }
   return myTZ.dateTime(sessionEpoch, UTC_TIME, timeFormatStr);
 }
 
-void printConvertedTime(const char *sessionName, const char *sessionStartTime)
-{
+void printConvertedTime(const char *sessionName, const char *sessionStartTime) {
 
   String timeStr = getConvertedTime(sessionStartTime, "");
   Serial.print(sessionName);
@@ -63,61 +58,44 @@ void printConvertedTime(const char *sessionName, const char *sessionStartTime)
   Serial.println(timeStr);
 }
 
-const char *sessionCodeToString(const char *sessionCode)
-{
-  if (strcmp(sessionCode, "fp1") == 0)
-  {
+const char *sessionCodeToString(const char *sessionCode) {
+  if (strcmp(sessionCode, "fp1") == 0) {
     return "FP1: ";
-  }
-  else if (strcmp(sessionCode, "fp2") == 0)
-  {
+  } else if (strcmp(sessionCode, "fp2") == 0) {
     return "FP2: ";
-  }
-  else if (strcmp(sessionCode, "fp3") == 0)
-  {
+  } else if (strcmp(sessionCode, "fp3") == 0) {
     return "FP3: ";
-  }
-  else if (strcmp(sessionCode, "qualifying") == 0)
-  {
+  } else if (strcmp(sessionCode, "qualifying") == 0) {
     return "Qualifying: ";
-  }
-  else if (strcmp(sessionCode, "sprint") == 0)
-  {
+  } else if (strcmp(sessionCode, "sprint") == 0) {
     return "Sprint: ";
-  }
-  else if (strcmp(sessionCode, "sprintQualifying") == 0)
-  {
+  } else if (strcmp(sessionCode, "sprintQualifying") == 0) {
     return "Sprint Quali: ";
-  }
-  else if (strcmp(sessionCode, "gp") == 0)
-  {
+  } else if (strcmp(sessionCode, "gp") == 0) {
     return "Race: ";
   }
 
   return "UNKNOWN";
 }
 
-void printRaceTimes(const char *raceName, JsonObject races_sessions)
-{
+void printRaceTimes(const char *raceName, JsonObject races_sessions) {
   Serial.print("Next Race: ");
   Serial.println(raceName);
 
-  for (JsonPair kv : races_sessions)
-  {
+  for (JsonPair kv : races_sessions) {
     printConvertedTime(sessionCodeToString(kv.key().c_str()),
                        kv.value().as<const char *>());
   }
 }
 
-String createTelegramMessageString(const char *raceName, JsonObject races_sessions)
-{
+String createTelegramMessageString(const char *raceName,
+                                   JsonObject races_sessions) {
   String message = "Next Race: ";
   message += raceName;
   message += "\n";
   message += "---------------------\n";
 
-  for (JsonPair kv : races_sessions)
-  {
+  for (JsonPair kv : races_sessions) {
     String sessionName = String(sessionCodeToString(kv.key().c_str()));
     message += sessionName;
     message += getConvertedTime(kv.value().as<const char *>(), "");
@@ -126,8 +104,7 @@ String createTelegramMessageString(const char *raceName, JsonObject races_sessio
   return message;
 }
 
-bool sendNotificationOfNextRace(UniversalTelegramBot *bot)
-{
+bool sendNotificationOfNextRace(UniversalTelegramBot *bot) {
 
   StaticJsonDocument<112> filter;
   filter["name"] = true;
@@ -138,10 +115,10 @@ bool sendNotificationOfNextRace(UniversalTelegramBot *bot)
   File racesJson = SPIFFS.open(CURRENT_RACE_FILE_NAME);
   DynamicJsonDocument race(1000);
 
-  DeserializationError error = deserializeJson(race, racesJson, DeserializationOption::Filter(filter));
+  DeserializationError error =
+      deserializeJson(race, racesJson, DeserializationOption::Filter(filter));
 
-  if (error)
-  {
+  if (error) {
     Serial.print("deserializeJson() failed: ");
     Serial.println(error.c_str());
     racesJson.close();
@@ -156,22 +133,21 @@ bool sendNotificationOfNextRace(UniversalTelegramBot *bot)
   Serial.print("Sending message to ");
   Serial.println(rl_f1Config.chatId);
   racesJson.close();
-  return bot->sendPhoto(rl_f1Config.chatId, "https://i.imgur.com/q3qsfSi.png", createTelegramMessageString(races_name, races_sessions));
+  return bot->sendPhoto(
+      rl_f1Config.chatId, "https://i.imgur.com/q3qsfSi.png",
+      createTelegramMessageString(races_name, races_sessions));
 }
 
-int fetchRaceJson(FileFetcher fileFetcher)
-{
+int fetchRaceJson(FileFetcher fileFetcher) {
   // In this example I reuse the same filename
   // over and over
-  if (SPIFFS.exists(RACE_FILE_NAME) == true)
-  {
+  if (SPIFFS.exists(RACE_FILE_NAME) == true) {
     Serial.println("Removing existing image");
     SPIFFS.remove(RACE_FILE_NAME);
   }
 
   fs::File f = SPIFFS.open(RACE_FILE_NAME, "w+");
-  if (!f)
-  {
+  if (!f) {
     Serial.println("file open failed");
     return -1;
   }
@@ -184,26 +160,22 @@ int fetchRaceJson(FileFetcher fileFetcher)
   return gotFile;
 }
 
-bool saveCurrentRaceToFile(const JsonObject &raceJson)
-{
+bool saveCurrentRaceToFile(const JsonObject &raceJson) {
 
-  if (raceJson.isNull())
-  {
+  if (raceJson.isNull()) {
     Serial.println("Race data is null, nothing to save");
     return false;
   }
 
   File currentRaceFile = SPIFFS.open(CURRENT_RACE_FILE_NAME, "w");
-  if (!currentRaceFile)
-  {
+  if (!currentRaceFile) {
     Serial.println("failed to open config file for writing");
     return false;
   }
 
   Serial.println("Saving Race Json");
   serializeJsonPretty(raceJson, Serial);
-  if (serializeJson(raceJson, currentRaceFile) == 0)
-  {
+  if (serializeJson(raceJson, currentRaceFile) == 0) {
     Serial.println(F("Failed to write to file"));
     return false;
   }
@@ -211,8 +183,82 @@ bool saveCurrentRaceToFile(const JsonObject &raceJson)
   return true;
 }
 
-bool getNextRace(int &offset, bool &notificationSent, F1Display *f1Display, bool forceRaceFileSave)
-{
+int actualNextRaceIndex = -1;
+int overrideRaceIndex = -1;
+
+enum RaceViewState { VIEW_DEFAULT, VIEW_IMAGE, VIEW_SESSIONS };
+RaceViewState currentViewState = VIEW_DEFAULT;
+
+bool renderRaceByIndex(F1Display *f1Display, int index) {
+  StaticJsonDocument<112> filter;
+  JsonObject filter_races_0 = filter["races"].createNestedObject();
+  filter_races_0["name"] = true;
+  filter_races_0["location"] = true;
+  filter_races_0["round"] = true;
+  filter_races_0["sessions"] = true;
+  filter_races_0["canceled"] = true;
+
+  File racesJson = SPIFFS.open(RACE_FILE_NAME);
+  DynamicJsonDocument doc(12288);
+  DeserializationError error =
+      deserializeJson(doc, racesJson, DeserializationOption::Filter(filter));
+  if (error)
+    return false;
+
+  JsonArray races = doc["races"];
+  if (index >= 0 && index < races.size()) {
+    const char *races_name = races[index]["name"];
+    JsonObject races_sessions = races[index]["sessions"];
+    const char *race_sessions_gp = races_sessions["gp"];
+
+    bool showSessions = isRaceWeek(race_sessions_gp);
+    if (currentViewState == VIEW_IMAGE)
+      showSessions = false;
+    else if (currentViewState == VIEW_SESSIONS)
+      showSessions = true;
+
+    if (showSessions) {
+      f1Display->displayRaceWeek(races_name, races_sessions);
+    } else {
+      f1Display->displayPlaceHolder(races_name, races_sessions);
+    }
+    racesJson.close();
+    return true;
+  }
+  racesJson.close();
+  return false;
+}
+
+void toggleRaceView(F1Display *f1Display) {
+  if (currentViewState == VIEW_DEFAULT) {
+    // Find default state for current race to flip it
+    StaticJsonDocument<112> filter;
+    JsonObject filter_races_0 = filter["races"].createNestedObject();
+    filter_races_0["sessions"] = true;
+    File racesJson = SPIFFS.open(RACE_FILE_NAME);
+    DynamicJsonDocument doc(12288);
+    if (!deserializeJson(doc, racesJson,
+                         DeserializationOption::Filter(filter))) {
+      JsonArray races = doc["races"];
+      int idx =
+          overrideRaceIndex >= 0 ? overrideRaceIndex : actualNextRaceIndex;
+      if (idx >= 0 && idx < races.size()) {
+        bool isWeek = isRaceWeek(races[idx]["sessions"]["gp"]);
+        currentViewState = isWeek ? VIEW_IMAGE : VIEW_SESSIONS;
+      }
+    }
+    racesJson.close();
+  } else if (currentViewState == VIEW_IMAGE) {
+    currentViewState = VIEW_SESSIONS;
+  } else {
+    currentViewState = VIEW_IMAGE;
+  }
+  renderRaceByIndex(f1Display, overrideRaceIndex >= 0 ? overrideRaceIndex
+                                                      : actualNextRaceIndex);
+}
+
+bool getNextRace(int &offset, bool &notificationSent, F1Display *f1Display,
+                 bool forceRaceFileSave) {
 
   StaticJsonDocument<112> filter;
 
@@ -226,10 +272,10 @@ bool getNextRace(int &offset, bool &notificationSent, F1Display *f1Display, bool
   File racesJson = SPIFFS.open(RACE_FILE_NAME);
   DynamicJsonDocument doc(12288);
 
-  DeserializationError error = deserializeJson(doc, racesJson, DeserializationOption::Filter(filter));
+  DeserializationError error =
+      deserializeJson(doc, racesJson, DeserializationOption::Filter(filter));
 
-  if (error)
-  {
+  if (error) {
     Serial.print("deserializeJson() failed: ");
     Serial.println(error.c_str());
     return false;
@@ -240,14 +286,14 @@ bool getNextRace(int &offset, bool &notificationSent, F1Display *f1Display, bool
   time_t timeNow = UTC.now();
   Serial.println();
   Serial.println("UTC:             " + UTC.dateTime());
-  for (int i = 0; i < racesAmount; i++)
-  {
+  for (int i = 0; i < racesAmount; i++) {
 
     // serializeJsonPretty(races[i], Serial);
 
     const char *races_name = races[i]["name"];
     JsonObject races_sessions = races[i]["sessions"];
-    const char *race_sessions_gp = races_sessions["gp"]; // "2023-03-05T15:00:00Z"
+    const char *race_sessions_gp =
+        races_sessions["gp"]; // "2023-03-05T15:00:00Z"
     bool raceCanceled = races[i]["canceled"].as<bool>();
 
     struct tm tm = {0};
@@ -257,50 +303,46 @@ bool getNextRace(int &offset, bool &notificationSent, F1Display *f1Display, bool
     strptime(race_sessions_gp, "%Y-%m-%dT%H:%M:%S", &tm);
 
     nextRaceStartUtc = mktime(&tm);
-    if (!raceCanceled && timeNow < nextRaceStartUtc)
-    {
+    if (!raceCanceled && timeNow < nextRaceStartUtc) {
       bool newRace = false;
       int roundNumber = races[i]["round"];
-      if (roundNumber != offset)
-      {
-        if (saveCurrentRaceToFile(races[i]))
-        {
+      if (roundNumber != offset) {
+        if (saveCurrentRaceToFile(races[i])) {
           offset = roundNumber;
           notificationSent = false;
           Serial.println("New Race");
           newRace = true;
-        }
-        else
-        {
+        } else {
           Serial.println("Got new race, but couldn't save JSON to file");
         }
-      }
-      else
-      {
+      } else {
         Serial.println("Same Race as before");
-        if (forceRaceFileSave)
-        {
-          if (saveCurrentRaceToFile(races[i]))
-          {
+        if (forceRaceFileSave) {
+          if (saveCurrentRaceToFile(races[i])) {
             Serial.println("(Forced Save) Saved race to file");
-          }
-          else
-          {
+          } else {
             Serial.println("(Forced Save) Couldn't save JSON to file");
           }
         }
       }
 
-      if (isRaceWeek(race_sessions_gp))
-      {
-        f1Display->displayRaceWeek(races_name, races_sessions);
-      }
-      else
-      {
-        f1Display->displayPlaceHolder(races_name, races_sessions);
-      }
+      actualNextRaceIndex = i;
 
-      printRaceTimes(races_name, races_sessions);
+      // Only update the display if we are not manually overriding the view
+      if (overrideRaceIndex == -1 || overrideRaceIndex == actualNextRaceIndex) {
+        bool showSessions = isRaceWeek(race_sessions_gp);
+        if (currentViewState == VIEW_IMAGE)
+          showSessions = false;
+        else if (currentViewState == VIEW_SESSIONS)
+          showSessions = true;
+
+        if (showSessions) {
+          f1Display->displayRaceWeek(races_name, races_sessions);
+        } else {
+          f1Display->displayPlaceHolder(races_name, races_sessions);
+        }
+        printRaceTimes(races_name, races_sessions);
+      }
       racesJson.close();
       return newRace;
     }
@@ -309,11 +351,11 @@ bool getNextRace(int &offset, bool &notificationSent, F1Display *f1Display, bool
   return false;
 }
 
-time_t getNotifyTime()
-{
+time_t getNotifyTime() {
 
   time_t t = nextRaceStartUtc - (6 * SECS_PER_DAY);
-  // Probably should make this smarter so it's not sending notifications in the middle of the night!
+  // Probably should make this smarter so it's not sending notifications in the
+  // middle of the night!
   return t;
 }
 

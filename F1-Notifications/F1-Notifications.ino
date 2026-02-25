@@ -44,8 +44,8 @@
 
 #include <WiFiClientSecure.h>
 
-#include <FS.h>
 #include "SPIFFS.h"
+#include <FS.h>
 
 // ----------------------------
 // Additional Libraries - each one of these will need to be installed.
@@ -60,7 +60,8 @@
 #include <ESP_DoubleResetDetector.h>
 // A library for checking if the reset button has been pressed twice
 // Can be used to enable config mode
-// Can be installed from the library manager (Search for "ESP_DoubleResetDetector")
+// Can be installed from the library manager (Search for
+// "ESP_DoubleResetDetector")
 // https://github.com/khoih-prog/ESP_DoubleResetDetector
 
 #include <ArduinoJson.h>
@@ -129,8 +130,7 @@ UniversalTelegramBot bot("", secured_client);
 
 F1Config f1Config;
 
-void setup()
-{
+void setup() {
   // put your setup code here, to run once:
 
   Serial.begin(115200);
@@ -140,9 +140,9 @@ void setup()
   bool forceConfig = false;
 
   drd = new DoubleResetDetector(DRD_TIMEOUT, DRD_ADDRESS);
-  if (drd->detectDoubleReset())
-  {
-    Serial.println(F("Forcing config mode as there was a Double reset detected"));
+  if (drd->detectDoubleReset()) {
+    Serial.println(
+        F("Forcing config mode as there was a Double reset detected"));
     forceConfig = true;
   }
 
@@ -152,16 +152,14 @@ void setup()
   // I have found once I used the true flag once, I could use it
   // without the true flag after that.
   bool spiffsInitSuccess = SPIFFS.begin(false) || SPIFFS.begin(true);
-  if (!spiffsInitSuccess)
-  {
+  if (!spiffsInitSuccess) {
     Serial.println("SPIFFS initialisation failed!");
     while (1)
       yield(); // Stay here twiddling thumbs waiting
   }
   Serial.println("\r\nInitialisation done.");
 
-  if (!f1Config.fetchConfigFile())
-  {
+  if (!f1Config.fetchConfigFile()) {
     // Failed to fetch config file, need to launch Wifi Manager
     forceConfig = true;
   }
@@ -175,8 +173,7 @@ void setup()
   // WiFi.mode(WIFI_STA);
   // WiFi.begin(ssid, password);
 
-  while (WiFi.status() != WL_CONNECTED)
-  {
+  while (WiFi.status() != WL_CONNECTED) {
     Serial.print(".");
     delay(500);
   }
@@ -187,8 +184,7 @@ void setup()
   Serial.println(WiFi.localIP());
 
   secured_client.setCACert(github_server_cert);
-  while (fetchRaceJson(fileFetcher) != 1)
-  {
+  while (fetchRaceJson(fileFetcher) != 1) {
     Serial.println("failed to get Race Json");
     Serial.println("will try again in 10 seconds");
     delay(1000 * 10);
@@ -214,30 +210,24 @@ void setup()
 
 bool notificaitonEventRaised = false;
 
-void sendNotification()
-{
+void sendNotification() {
   // Cause it could be set to the image one
-  if (f1Config.isTelegramConfigured())
-  {
+  if (f1Config.isTelegramConfigured()) {
     secured_client.setCACert(TELEGRAM_CERTIFICATE_ROOT);
     Serial.println("Sending notifcation");
     f1Config.currentRaceNotification = sendNotificationOfNextRace(&bot);
-    if (!f1Config.currentRaceNotification)
-    {
+    if (!f1Config.currentRaceNotification) {
       // Notificaiton failed, raise event again
       Serial.println("Notfication failed");
       setEvent(sendNotification, getNotifyTime());
-    }
-    else
-    {
+    } else {
       notificaitonEventRaised = false;
       f1Config.saveConfigFile();
     }
-  }
-  else
-  {
+  } else {
 
-    Serial.println("Would have sent Notification now, but telegram is not configured");
+    Serial.println(
+        "Would have sent Notification now, but telegram is not configured");
 
     notificaitonEventRaised = false;
     f1Config.currentRaceNotification = true;
@@ -249,16 +239,13 @@ bool first = true;
 
 int minuteCounter = 60; // kick off fetch first time
 
-void loop()
-{
+void loop() {
   drd->loop();
 
   // Every hour we will refresh the Race JSON from Github
-  if (minuteCounter >= 60)
-  {
+  if (minuteCounter >= 60) {
     secured_client.setCACert(github_server_cert);
-    while (fetchRaceJson(fileFetcher) != 1)
-    {
+    while (fetchRaceJson(fileFetcher) != 1) {
       Serial.println("failed to get Race Json");
       Serial.println("will try again in 10 seconds");
       delay(1000 * 10);
@@ -266,23 +253,52 @@ void loop()
     minuteCounter = 0;
   }
 
-  if (first || minuteChanged())
-  {
+  if (first || minuteChanged()) {
     minuteCounter++;
-    bool newRace = getNextRace(f1Config.roundOffset, f1Config.currentRaceNotification, f1Display, first);
-    if (newRace)
-    {
+    bool newRace =
+        getNextRace(f1Config.roundOffset, f1Config.currentRaceNotification,
+                    f1Display, first);
+    if (newRace) {
       f1Config.saveConfigFile();
     }
-    if (!f1Config.currentRaceNotification && !notificaitonEventRaised)
-    {
+    if (!f1Config.currentRaceNotification && !notificaitonEventRaised) {
       // we have never notified about this race yet, so we'll raise an event
       setEvent(sendNotification, getNotifyTime());
       notificaitonEventRaised = true;
       Serial.print("Raised event for: ");
-      Serial.println(myTZ.dateTime(getNotifyTime(), UTC_TIME, f1Config.timeFormat));
+      Serial.println(
+          myTZ.dateTime(getNotifyTime(), UTC_TIME, f1Config.timeFormat));
     }
     first = false;
+  }
+
+  TouchAction action = f1Display->checkTouch();
+  if (action != TOUCH_NONE) {
+    if (action == TOUCH_TOGGLE) {
+      toggleRaceView(f1Display);
+    } else if (action == TOUCH_PREV) {
+      int target =
+          (overrideRaceIndex >= 0 ? overrideRaceIndex : actualNextRaceIndex) -
+          1;
+      if (target >= 0) {
+        overrideRaceIndex = target;
+        currentViewState = VIEW_IMAGE;
+        renderRaceByIndex(f1Display, overrideRaceIndex);
+      }
+    } else if (action == TOUCH_NEXT) {
+      int target =
+          (overrideRaceIndex >= 0 ? overrideRaceIndex : actualNextRaceIndex) +
+          1;
+      currentViewState = VIEW_IMAGE;
+      if (renderRaceByIndex(f1Display, target)) {
+        overrideRaceIndex = target;
+      } else {
+        // out of bounds, restore previous state
+        renderRaceByIndex(f1Display, overrideRaceIndex >= 0
+                                         ? overrideRaceIndex
+                                         : actualNextRaceIndex);
+      }
+    }
   }
 
   events();
